@@ -20,7 +20,7 @@ import plotly.offline as pyo
 import datetime
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])  # https://bootswatch.com/default/ for more themes
-token = "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"
+token = "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"
 
 # ------------------------------------------------------------------------
 app.layout = html.Div([
@@ -45,6 +45,7 @@ app.layout = html.Div([
             # selectionEnd='',       # the offset into the element's text content of the last selected character
         ),
     ]),
+    html.Div(id='output_container', children=[]),
   
 
 
@@ -87,7 +88,8 @@ app.layout = html.Div([
     Output(component_id='Sun_plot',component_property='figure'),
     Output(component_id='Time_Bub_Plot',component_property='figure'),
     Output(component_id='Size_Bub_Plot',component_property='figure'),
-    Output(component_id='Geo_Plot',component_property='figure')]
+    Output(component_id='Geo_Plot',component_property='figure'),
+    Output(component_id='output_container',component_property='children')]
 
     ,
     Input(component_id='user_input', component_property='value'),
@@ -95,18 +97,30 @@ app.layout = html.Div([
 )
 def update_graph(username):
     print(username)
-
-    g = Github(username, token)
-    user = g.get_user(username)
     dates = []
     unique = []
-    followers  = []
-    Lat = []
-    Lon = []
+
+    g = Github("rdonners", token)
+    # if username is None:
+    #     print("Nothing")
+    #     return     
+    user = g.get_user(username)
+    print("got him")
     locator = Nominatim(user_agent="myGeocoder")
     df_Rep = pd.DataFrame(columns = ['Name', 'Commits', 'Time', 'Size','Language', 'Date Created'])
     df_Fol = pd.DataFrame(columns = ['Name', 'Avatar', 'Lat', 'Lon'])   
     df_Com = pd.DataFrame(columns = ['Date', 'Commits'])
+    if user is None:
+         container = "User {} does not exist" 
+         fig_Line = px.line(df_Com, x='Date', y='Commits')
+         figSun = px.sunburst(df_Rep, path=['Language', 'Name'], values = 'Size')
+         figBubTime = px.scatter(df_Rep, x = "Time", y = "Commits", color = "Language", hover_data=['Name'])
+         figBubSize = px.scatter(df_Rep, x = "Size", y = "Commits", color = "Language", hover_data=['Name'])
+         fig_Map = px.scatter_geo(df_Fol, lat="Lat",lon="Lon" , hover_data=["Name","Location"],projection="orthographic")
+         return container
+    container = "User:" + username
+   
+   
     print("Searching")
     for repo in user.get_repos(): 
         timeSpent = repo.pushed_at - repo.created_at
@@ -152,12 +166,11 @@ def update_graph(username):
     print("C")
     fig_Map = px.scatter_geo(df_Fol, lat="Lat",lon="Lon" , hover_data=["Name","Location"],projection="orthographic")
     print("D")
-    return fig_Line,figSun,figBubTime,figBubSize,fig_Map
+    return fig_Line,figSun,figBubTime,figBubSize,fig_Map,container
 
 
 # ------------------------------------------------------------------------
 if __name__ == '__main__':
     app.run_server(debug=True)
 
-    
-# https://youtu.be/VZ6IdRMc0RI
+
